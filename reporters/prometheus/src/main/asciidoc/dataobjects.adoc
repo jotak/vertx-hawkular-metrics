@@ -1,0 +1,22 @@
+= Cheatsheets
+
+[[VertxPrometheusOptions]]
+== VertxPrometheusOptions
+
+++++
+ Vert.x Prometheus monitoring configuration.
+++++
+'''
+
+[cols=">25%,^25%,50%"]
+[frame="topbot"]
+|===
+^|Name | Type ^| Description
+|[[disabledMetricsTypes]]`disabledMetricsTypes`|`Array of link:enums.html#MetricsType[MetricsType]`|-
+|[[enabled]]`enabled`|`Boolean`|-
+|[[metricsBridgeAddress]]`metricsBridgeAddress`|`String`|-
+|[[metricsBridgeEnabled]]`metricsBridgeEnabled`|`Boolean`|-
+|[[prefix]]`prefix`|`String`|-
+|[[schedule]]`schedule`|`Number (int)`|-
+|===
+

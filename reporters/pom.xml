@@ -32,5 +32,6 @@
   <modules>
     <module>influxdb</module>
     <module>hawkular</module>
+    <module>prometheus</module>
   </modules>
 </project>
