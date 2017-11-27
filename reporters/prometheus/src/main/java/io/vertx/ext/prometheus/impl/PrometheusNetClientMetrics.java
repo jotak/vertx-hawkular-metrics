@@ -16,6 +16,7 @@
 
 package io.vertx.ext.prometheus.impl;
 
+import io.prometheus.client.CollectorRegistry;
 import io.prometheus.client.Counter;
 import io.prometheus.client.Gauge;
 import io.prometheus.client.Histogram;
@@ -32,15 +33,19 @@ class PrometheusNetClientMetrics implements TCPMetrics<String> {
   private final Histogram bytesSent;
   private final Counter errorCount;
 
-  PrometheusNetClientMetrics(MetricsStore store) {
-    connections = store.gauge("net_client_connections", "Number of connections to the remote host currently opened",
-      "remote");
-    bytesReceived = store.histogram("net_client_bytes_received", "Number of bytes received from the remote host",
-      "remote");
-    bytesSent = store.histogram("net_client_bytes_sent", "Number of bytes sent to the remote host",
-      "remote");
-    errorCount = store.counter("net_client_error_count", "Number of errors",
-      "remote");
+  PrometheusNetClientMetrics(CollectorRegistry registry) {
+    connections = Gauge.build("vertx_net_client_connections", "Number of connections to the remote host currently opened")
+      .labelNames("remote")
+      .register(registry);
+    bytesReceived = Histogram.build("vertx_net_client_bytes_received", "Number of bytes received from the remote host")
+      .labelNames("remote")
+      .register(registry);
+    bytesSent = Histogram.build("vertx_net_client_bytes_sent", "Number of bytes sent to the remote host")
+      .labelNames("remote")
+      .register(registry);
+    errorCount = Counter.build("vertx_net_client_error_count", "Number of errors")
+      .labelNames("remote")
+      .register(registry);
   }
 
   @Override

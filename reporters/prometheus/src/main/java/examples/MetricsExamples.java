@@ -18,7 +18,10 @@ package examples;
 import io.vertx.core.Vertx;
 import io.vertx.core.VertxOptions;
 import io.vertx.docgen.Source;
+import io.vertx.ext.metrics.collector.MetricsType;
 import io.vertx.ext.prometheus.VertxPrometheusOptions;
+import io.vertx.ext.prometheus.impl.PrometheusVertxMetrics;
+import io.vertx.ext.web.Router;
 
 /**
  * @author Joel Takvorian
@@ -31,7 +34,28 @@ public class MetricsExamples {
 
   public void setup() {
     Vertx vertx = Vertx.vertx(new VertxOptions().setMetricsOptions(
+      new VertxPrometheusOptions().setEnabled(true)));
+  }
+
+  public void setupDedicatedServer() {
+    Vertx vertx = Vertx.vertx(new VertxOptions().setMetricsOptions(
       new VertxPrometheusOptions().setEnabled(true)
-    ));
+        .startDedicatedServer(8080, "/metrics")));
+  }
+
+  public void setupBoundRouter() {
+    Vertx vertx = Vertx.vertx(new VertxOptions().setMetricsOptions(
+      new VertxPrometheusOptions().setEnabled(true)));
+
+    // Later on, creating a router
+    Router router = Router.router(vertx);
+    router.route("/custom").handler(PrometheusVertxMetrics.createMetricsHandler());
+  }
+
+  public void setupDisabledMetricsTypes() {
+    Vertx vertx = Vertx.vertx(new VertxOptions().setMetricsOptions(
+      new VertxPrometheusOptions().setEnabled(true)
+        .addDisabledMetricsType(MetricsType.HTTP_CLIENT)
+        .addDisabledMetricsType(MetricsType.NET_CLIENT)));
   }
 }

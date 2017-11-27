@@ -16,18 +16,21 @@
 
 package io.vertx.ext.prometheus.impl;
 
-
+import io.prometheus.client.CollectorRegistry;
 import io.vertx.core.Vertx;
 import io.vertx.core.VertxOptions;
+import io.vertx.core.http.HttpClientRequest;
+import io.vertx.ext.metrics.collector.MetricsType;
 import io.vertx.ext.prometheus.VertxPrometheusOptions;
+import io.vertx.ext.unit.Async;
 import io.vertx.ext.unit.TestContext;
 import io.vertx.ext.unit.junit.VertxUnitRunner;
+import io.vertx.ext.web.Router;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
-// TODO
 @RunWith(VertxUnitRunner.class)
 public class PrometheusMetricsTest {
 
@@ -35,69 +38,103 @@ public class PrometheusMetricsTest {
 
   @Before
   public void setUp(TestContext context) {
-    vertx = Vertx.vertx(new VertxOptions().setMetricsOptions(
-      new VertxPrometheusOptions().setEnabled(true).setPrefix("vertx"))
-    );
-
+    CollectorRegistry.defaultRegistry.clear();
   }
 
   @After
   public void after(TestContext context) {
-    vertx.close(context.asyncAssertSuccess());
+    CollectorRegistry.defaultRegistry.clear();
   }
 
   @Test
-  public void test() throws InterruptedException {
+  public void shouldStartDedicatedServer(TestContext context) {
+    vertx = Vertx.vertx(new VertxOptions()
+      .setMetricsOptions(new VertxPrometheusOptions().setEnabled(true).startDedicatedServer(8080)));
+
+    Async async = context.async();
+    HttpClientRequest req = vertx.createHttpClient()
+      .get(8080, "localhost", "/metrics")
+      .handler(res -> {
+        context.assertEquals(200, res.statusCode());
+        res.bodyHandler(body -> {
+          context.assertTrue(body.toString().contains("# HELP vertx_verticle"));
+          async.complete();
+        });
+      });
+    req.end();
   }
 
-//  public static void main(String[] args) {
-//    Vertx vertx = Vertx.vertx(new VertxOptions()
-//      .setMetricsOptions(new VertxPrometheusOptions().setEnabled(true).setPrefix("vertx")));
-//    Router router = Router.router(vertx);
-//    router.route("/").handler(routingContext -> routingContext.response().putHeader("content-type", "text/html").end("Hello World!"));
-//    router.route("/metrics").handler(new MetricsHandler());
-//    vertx.createHttpServer().requestHandler(router::accept).listen(8080);
-//    vertx.eventBus().consumer("test-eb", msg -> {
-//      try {
-//        Thread.sleep(500);
-//      } catch (InterruptedException e) {
-//        e.printStackTrace();
-//      }
-//    });
-////    vertx.setPeriodic(200, l -> {
-//      vertx.eventBus().publish("test-eb", "iiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiii");
-////    });
-////    vertx.setPeriodic(500, l -> {
-////      vertx.eventBus().send("test-eb", "idddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiii");
-////    });
-//
-//    HttpClientRequest req = vertx.createHttpClient()
-//      .get("www.homeblocks.net", "/")
-//      .handler(res -> {
-//        res.bodyHandler(System.out::println);
-//      });
-//    req.end();
-//
-//    vertx.deployVerticle(new Verticle() {
-//      @Override
-//      public Vertx getVertx() {
-//        return vertx;
-//      }
-//
-//      @Override
-//      public void init(Vertx vertx, Context context) {
-//
-//      }
-//
-//      @Override
-//      public void start(Future<Void> startFuture) throws Exception {
-//
-//      }
-//
-//      @Override
-//      public void stop(Future<Void> stopFuture) throws Exception {
-//
-//      }
-//    });
-//  }
+  @Test
+  public void shouldBindExistingServer(TestContext context) {
+    vertx = Vertx.vertx(new VertxOptions()
+      .setMetricsOptions(new VertxPrometheusOptions().setEnabled(true)));
+
+    Router router = Router.router(vertx);
+    router.route("/custom").handler(PrometheusVertxMetrics.createMetricsHandler());
+    vertx.createHttpServer().requestHandler(router::accept).listen(8081);
+
+    Async async = context.async();
+    HttpClientRequest req = vertx.createHttpClient()
+      .get(8081, "localhost", "/custom")
+      .handler(res -> {
+        context.assertEquals(200, res.statusCode());
+        res.bodyHandler(body -> {
+          context.assertTrue(body.toString().contains("# HELP vertx_verticle"));
+          async.complete();
+        });
+      });
+    req.end();
+  }
+
+  @Test
+  public void shouldExcludeVerticleMetrics(TestContext context) {
+    vertx = Vertx.vertx(new VertxOptions()
+      .setMetricsOptions(new VertxPrometheusOptions().setEnabled(true)
+        .startDedicatedServer(8080)
+        .addDisabledMetricsType(MetricsType.VERTICLES)));
+
+    Async async = context.async();
+    HttpClientRequest req = vertx.createHttpClient()
+      .get(8080, "localhost", "/metrics")
+      .handler(res -> {
+        context.assertEquals(200, res.statusCode());
+        res.bodyHandler(body -> {
+          context.assertFalse(body.toString().contains("# HELP vertx_verticle"));
+          context.assertTrue(body.toString().contains("# HELP vertx_pool_queue_size"));
+          async.complete();
+        });
+      });
+    req.end();
+  }
+
+  @Test
+  public void shouldExposeEventBusMetrics(TestContext context) {
+    vertx = Vertx.vertx(new VertxOptions()
+      .setMetricsOptions(new VertxPrometheusOptions().setEnabled(true)
+        .startDedicatedServer(8080)));
+
+    // Send something on the eventbus and wait til it's received
+    Async asyncEB = context.async();
+    vertx.eventBus().consumer("test-eb", msg -> asyncEB.complete());
+    vertx.eventBus().publish("test-eb", "test message");
+    asyncEB.await(2000);
+
+    // Read metrics on HTTP endpoint for eventbus metrics
+    Async async = context.async();
+    HttpClientRequest req = vertx.createHttpClient()
+      .get(8080, "localhost", "/metrics")
+      .handler(res -> {
+        context.assertEquals(200, res.statusCode());
+        res.bodyHandler(body -> {
+          String str = body.toString();
+          context.assertTrue(str.contains("vertx_eventbus_published{address=\"test-eb\",origin=\"local\",} 1.0"));
+          context.assertTrue(str.contains("vertx_eventbus_received{address=\"test-eb\",origin=\"local\",} 1.0"));
+          context.assertTrue(str.contains("vertx_eventbus_handlers{address=\"test-eb\",} 1.0"));
+          context.assertTrue(str.contains("vertx_eventbus_delivered{address=\"test-eb\",origin=\"local\",} 1.0"));
+          context.assertTrue(str.contains("vertx_eventbus_processing_time_count{address=\"test-eb\",} 1.0"));
+          async.complete();
+        });
+      });
+    req.end();
+  }
 }

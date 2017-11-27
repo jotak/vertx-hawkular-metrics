@@ -15,6 +15,7 @@
  */
 package io.vertx.ext.prometheus.impl;
 
+import io.prometheus.client.CollectorRegistry;
 import io.prometheus.client.Counter;
 import io.prometheus.client.Gauge;
 import io.prometheus.client.Histogram;
@@ -30,15 +31,19 @@ class PrometheusNetServerMetrics {
   private final Histogram bytesSent;
   private final Counter errorCount;
 
-  PrometheusNetServerMetrics(MetricsStore store) {
-    connections = store.gauge("net_server_connections", "Number of opened connections to the net server",
-      "local");
-    bytesReceived = store.histogram("net_server_bytes_received", "Number of bytes received by the net server",
-      "local");
-    bytesSent = store.histogram("net_server_bytes_sent", "Number of bytes sent by the net server",
-      "local");
-    errorCount = store.counter("net_server_error_count", "Number of errors",
-      "local");
+  PrometheusNetServerMetrics(CollectorRegistry registry) {
+    connections = Gauge.build("vertx_net_server_connections", "Number of opened connections to the net server")
+      .labelNames("local")
+      .register(registry);
+    bytesReceived = Histogram.build("vertx_net_server_bytes_received", "Number of bytes received by the net server")
+      .labelNames("local")
+      .register(registry);
+    bytesSent = Histogram.build("vertx_net_server_bytes_sent", "Number of bytes sent by the net server")
+      .labelNames("local")
+      .register(registry);
+    errorCount = Counter.build("vertx_net_server_error_count", "Number of errors")
+      .labelNames("local")
+      .register(registry);
   }
 
   TCPMetrics forAddress(SocketAddress localAddress) {

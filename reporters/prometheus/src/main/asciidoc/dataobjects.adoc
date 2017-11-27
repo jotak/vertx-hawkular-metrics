@@ -5,6 +5,9 @@
 
 ++++
  Vert.x Prometheus monitoring configuration.
+ If no dedicated server is used, you can bind an existing link with <br/>
+ Ex:<br/>
+ <code>myRouter.route("/metrics").handler(PrometheusVertxMetrics.createMetricsHandler());</code>
 ++++
 '''
 
@@ -12,11 +15,15 @@
 [frame="topbot"]
 |===
 ^|Name | Type ^| Description
-|[[disabledMetricsTypes]]`disabledMetricsTypes`|`Array of link:enums.html#MetricsType[MetricsType]`|-
-|[[enabled]]`enabled`|`Boolean`|-
-|[[metricsBridgeAddress]]`metricsBridgeAddress`|`String`|-
-|[[metricsBridgeEnabled]]`metricsBridgeEnabled`|`Boolean`|-
-|[[prefix]]`prefix`|`String`|-
-|[[schedule]]`schedule`|`Number (int)`|-
+|[[disabledMetricsTypes]]`disabledMetricsTypes`|`Array of link:enums.html#MetricsType[MetricsType]`|
++++
+Sets metrics types that are disabled.
++++
+|[[enabled]]`enabled`|`Boolean`|
++++
+Set whether metrics will be enabled on the Vert.x instance. Metrics are not enabled by default.
++++
+|[[serverEndpoint]]`serverEndpoint`|`String`|-
+|[[serverPort]]`serverPort`|`Number (int)`|-
 |===
 

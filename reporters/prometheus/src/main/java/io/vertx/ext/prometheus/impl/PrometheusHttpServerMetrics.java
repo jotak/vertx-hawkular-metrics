@@ -15,6 +15,7 @@
  */
 package io.vertx.ext.prometheus.impl;
 
+import io.prometheus.client.CollectorRegistry;
 import io.prometheus.client.Counter;
 import io.prometheus.client.Gauge;
 import io.prometheus.client.Histogram;
@@ -38,23 +39,31 @@ class PrometheusHttpServerMetrics {
   private final Histogram processingTime;
   private final Gauge wsConnections;
 
-  PrometheusHttpServerMetrics(MetricsStore store) {
-    connections = store.gauge("http_server_connections", "Number of opened connections to the HTTP server",
-      "local");
-    bytesReceived = store.histogram("http_server_bytes_received", "Number of bytes received by the HTTP server",
-      "local");
-    bytesSent = store.histogram("http_server_bytes_sent", "Number of bytes sent by the HTTP server",
-      "local");
-    errorCount = store.counter("http_server_error_count", "Number of errors",
-      "local");
-    requests = store.gauge("http_server_requests", "Number of requests being processed",
-      "local");
-    requestCount = store.counter("http_server_request_count", "Number of processed requests",
-      "local");
-    processingTime = store.histogram("http_server_reponse_time", "Request processing time",
-      "local");
-    wsConnections = store.gauge("http_server_ws_connections", "Number of websockets currently opened",
-      "local");
+  PrometheusHttpServerMetrics(CollectorRegistry registry) {
+    connections = Gauge.build("vertx_http_server_connections", "Number of opened connections to the HTTP server")
+      .labelNames("local")
+      .register(registry);
+    bytesReceived = Histogram.build("vertx_http_server_bytes_received", "Number of bytes received by the HTTP server")
+      .labelNames("local")
+      .register(registry);
+    bytesSent = Histogram.build("vertx_http_server_bytes_sent", "Number of bytes sent by the HTTP server")
+      .labelNames("local")
+      .register(registry);
+    errorCount = Counter.build("vertx_http_server_error_count", "Number of errors")
+      .labelNames("local")
+      .register(registry);
+    requests = Gauge.build("vertx_http_server_requests", "Number of requests being processed")
+      .labelNames("local")
+      .register(registry);
+    requestCount = Counter.build("vertx_http_server_request_count", "Number of processed requests")
+      .labelNames("local")
+      .register(registry);
+    processingTime = Histogram.build("vertx_http_server_reponse_time", "Request processing time")
+      .labelNames("local")
+      .register(registry);
+    wsConnections = Gauge.build("vertx_http_server_ws_connections", "Number of websockets currently opened")
+      .labelNames("local")
+      .register(registry);
   }
 
   HttpServerMetrics forAddress(SocketAddress localAddress) {

@@ -15,6 +15,7 @@
  */
 package io.vertx.ext.prometheus.impl;
 
+import io.prometheus.client.CollectorRegistry;
 import io.prometheus.client.Counter;
 import io.prometheus.client.Gauge;
 import io.prometheus.client.Histogram;
@@ -40,29 +41,40 @@ class PrometheusEventBusMetrics implements EventBusMetrics<PrometheusEventBusMet
   private final Histogram bytesRead;
   private final Histogram bytesWritten;
 
-  PrometheusEventBusMetrics(MetricsStore store) {
-    handlers = store.gauge("eventbus_handlers", "Number of event bus handlers in use",
-      "address");
-    pending = store.gauge("eventbus_pending", "Number of messages not processed yet",
-      "address", "origin");
-    published = store.counter("eventbus_published", "Number of messages published (publish / subscribe)",
-      "address", "origin");
-    sent = store.counter("eventbus_sent", "Number of messages sent (point-to-point)",
-      "address", "origin");
-    received = store.counter("eventbus_received", "Number of messages received",
-      "address", "origin");
-    delivered = store.counter("eventbus_delivered", "Number of messages delivered to handlers",
-      "address", "origin");
-    errorCount = store.counter("eventbus_error_count", "Number of errors",
-      "address");
-    replyFailures = store.counter("eventbus_reply_failures", "Number of message reply failures",
-      "address");
-    processTime = store.histogram("eventbus_processing_time", "Processing time",
-      "address");
-    bytesRead = store.histogram("eventbus_bytes_read", "Number of bytes received while reading messages from event bus cluster peers",
-      "address");
-    bytesWritten = store.histogram("eventbus_bytes_written", "Number of bytes sent while sending messages to event bus cluster peers",
-      "address");
+  PrometheusEventBusMetrics(CollectorRegistry registry) {
+    handlers = Gauge.build("vertx_eventbus_handlers", "Number of event bus handlers in use")
+      .labelNames("address")
+      .register(registry);
+    pending = Gauge.build("vertx_eventbus_pending", "Number of messages not processed yet")
+      .labelNames("address", "origin")
+      .register(registry);
+    published = Counter.build("vertx_eventbus_published", "Number of messages published (publish / subscribe)")
+      .labelNames("address", "origin")
+      .register(registry);
+    sent = Counter.build("vertx_eventbus_sent", "Number of messages sent (point-to-point)")
+      .labelNames("address", "origin")
+      .register(registry);
+    received = Counter.build("vertx_eventbus_received", "Number of messages received")
+      .labelNames("address", "origin")
+      .register(registry);
+    delivered = Counter.build("vertx_eventbus_delivered", "Number of messages delivered to handlers")
+      .labelNames("address", "origin")
+      .register(registry);
+    errorCount = Counter.build("vertx_eventbus_error_count", "Number of errors")
+      .labelNames("address")
+      .register(registry);
+    replyFailures = Counter.build("vertx_eventbus_reply_failures", "Number of message reply failures")
+      .labelNames("address")
+      .register(registry);
+    processTime = Histogram.build("vertx_eventbus_processing_time", "Processing time")
+      .labelNames("address")
+      .register(registry);
+    bytesRead = Histogram.build("vertx_eventbus_bytes_read", "Number of bytes received while reading messages from event bus cluster peers")
+      .labelNames("address")
+      .register(registry);
+    bytesWritten = Histogram.build("vertx_eventbus_bytes_written", "Number of bytes sent while sending messages to event bus cluster peers")
+      .labelNames("address")
+      .register(registry);
   }
 
   @Override
@@ -105,7 +117,6 @@ class PrometheusEventBusMetrics implements EventBusMetrics<PrometheusEventBusMet
 
   @Override
   public void messageReceived(String address, boolean publish, boolean local, int handlers) {
-    // TODO: Business logic about pending differs from DW module. Which one is right?
     String origin = local ? LOCAL : REMOTE;
     pending.labels(address, origin).inc(handlers);
     received.labels(address, origin).inc();

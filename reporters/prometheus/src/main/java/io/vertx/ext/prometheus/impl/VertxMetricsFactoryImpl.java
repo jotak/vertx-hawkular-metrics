@@ -36,7 +36,7 @@ public class VertxMetricsFactoryImpl implements VertxMetricsFactory {
     } else {
       prometheusOptions = new VertxPrometheusOptions(metricsOptions.toJson());
     }
-    return new PrometheusVertxMetrics(prometheusOptions);
+    return new PrometheusVertxMetrics(vertx, prometheusOptions);
   }
 
   @Override

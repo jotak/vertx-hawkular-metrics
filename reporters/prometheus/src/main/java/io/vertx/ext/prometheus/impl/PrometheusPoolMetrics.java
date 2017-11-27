@@ -16,6 +16,7 @@
 
 package io.vertx.ext.prometheus.impl;
 
+import io.prometheus.client.CollectorRegistry;
 import io.prometheus.client.Counter;
 import io.prometheus.client.Gauge;
 import io.prometheus.client.Histogram;
@@ -32,19 +33,25 @@ class PrometheusPoolMetrics {
   private final Gauge usageRatio;
   private final Counter completed;
 
-  PrometheusPoolMetrics(MetricsStore store) {
-    queueDelay = store.histogram("pool_queue_delay", "Queue time for a resource",
-      "pool_type", "pool_name");
-    queueSize = store.gauge("pool_queue_size", "Number of elements waiting for a resource",
-      "pool_type", "pool_name");
-    usage = store.histogram("pool_usage", "Time using a resource",
-      "pool_type", "pool_name");
-    inUse = store.gauge("pool_in_use", "Number of resources used",
-      "pool_type", "pool_name");
-    usageRatio = store.gauge("pool_ratio", "Pool usage ratio, only present if maximum pool size could be determined",
-      "pool_type", "pool_name", "max_pool_size");
-    completed = store.counter("pool_completed", "Number of elements done with the resource",
-      "pool_type", "pool_name");
+  PrometheusPoolMetrics(CollectorRegistry registry) {
+    queueDelay = Histogram.build("vertx_pool_queue_delay", "Queue time for a resource")
+      .labelNames("pool_type", "pool_name")
+      .register(registry);
+    queueSize = Gauge.build("vertx_pool_queue_size", "Number of elements waiting for a resource")
+      .labelNames("pool_type", "pool_name")
+      .register(registry);
+    usage = Histogram.build("vertx_pool_usage", "Time using a resource")
+      .labelNames("pool_type", "pool_name")
+      .register(registry);
+    inUse = Gauge.build("vertx_pool_in_use", "Number of resources used")
+      .labelNames("pool_type", "pool_name")
+      .register(registry);
+    usageRatio = Gauge.build("vertx_pool_ratio", "Pool usage ratio, only present if maximum pool size could be determined")
+      .labelNames("pool_type", "pool_name", "max_pool_size")
+      .register(registry);
+    completed = Counter.build("vertx_pool_completed", "Number of elements done with the resource")
+      .labelNames("pool_type", "pool_name")
+      .register(registry);
   }
 
   PoolMetrics forInstance(String poolType, String poolName, int maxPoolSize) {

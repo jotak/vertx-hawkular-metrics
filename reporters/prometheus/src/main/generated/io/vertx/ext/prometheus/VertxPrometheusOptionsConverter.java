@@ -38,18 +38,6 @@ public class VertxPrometheusOptionsConverter {
     if (json.getValue("enabled") instanceof Boolean) {
       obj.setEnabled((Boolean)json.getValue("enabled"));
     }
-    if (json.getValue("metricsBridgeAddress") instanceof String) {
-      obj.setMetricsBridgeAddress((String)json.getValue("metricsBridgeAddress"));
-    }
-    if (json.getValue("metricsBridgeEnabled") instanceof Boolean) {
-      obj.setMetricsBridgeEnabled((Boolean)json.getValue("metricsBridgeEnabled"));
-    }
-    if (json.getValue("prefix") instanceof String) {
-      obj.setPrefix((String)json.getValue("prefix"));
-    }
-    if (json.getValue("schedule") instanceof Number) {
-      obj.setSchedule(((Number)json.getValue("schedule")).intValue());
-    }
   }
 
   public static void toJson(VertxPrometheusOptions obj, JsonObject json) {
@@ -59,13 +47,9 @@ public class VertxPrometheusOptionsConverter {
       json.put("disabledMetricsTypes", array);
     }
     json.put("enabled", obj.isEnabled());
-    if (obj.getMetricsBridgeAddress() != null) {
-      json.put("metricsBridgeAddress", obj.getMetricsBridgeAddress());
+    if (obj.getServerEndpoint() != null) {
+      json.put("serverEndpoint", obj.getServerEndpoint());
     }
-    json.put("metricsBridgeEnabled", obj.isMetricsBridgeEnabled());
-    if (obj.getPrefix() != null) {
-      json.put("prefix", obj.getPrefix());
-    }
-    json.put("schedule", obj.getSchedule());
+    json.put("serverPort", obj.getServerPort());
   }
 }

@@ -1,5 +1,3 @@
-// TODO
-
 /*
  * Copyright (c) 2011-2017 The original author or authors
  * ------------------------------------------------------
@@ -17,22 +15,20 @@
  */
 
 /**
- * = InfluxDb Metrics
+ * = Prometheus Metrics
  *
  * This project is an implementation of the Vert.x Metrics Service Provider Interface (SPI): metrics built from Vert.x
- * events will be sent to InfluxDb, an https://github.com/influxdata/influxdb[open source time series database].
+ * events are available for https://prometheus.io/[Prometheus] scraper.
  *
  * == Features
  *
  * * Vert.x core tools monitoring: TCP/HTTP client and servers, {@link io.vertx.core.datagram.DatagramSocket},
  * {@link io.vertx.core.eventbus.EventBus} and handlers
- * * User defined metrics via an {@link io.vertx.core.eventbus.EventBus} bridge.
+ * * User defined metrics can be added to the shared registry (using Prometheus https://github.com/prometheus/client_java[simple Java client])
  *
  * == Prerequisites
  *
- * Follow the https://docs.influxdata.com/influxdb/v1.2/introduction/getting_started/[instructions to get InfluxDb up and running].
- *
- * NOTE: You can use a standalone InfluxDb server as well.
+ * Follow the https://prometheus.io/docs/prometheus/latest/getting_started/[instructions to get Prometheus up and running].
  *
  * == Getting started
  *
@@ -56,6 +52,29 @@
  * compile '${maven.groupId}:${maven.artifactId}:${maven.version}'
  * ----
  *
+ * Vert.x does not enable SPI implementations by default. You must enable metric collection in the Vert.x options:
+ *
+ * [source,$lang]
+ * ----
+ * {@link examples.MetricsExamples#setup()}
+ * ----
+ *
+ * == Configuration
+ *
+ * === Using a dedicated HTTP server for exposing endpoints
+ *
+ * [source,$lang]
+ * ----
+ * {@link examples.MetricsExamples#setupDedicatedServer()}
+ * ----
+ *
+ * === Binding an existing Vert.X router
+ *
+ * [source,$lang]
+ * ----
+ * {@link examples.MetricsExamples#setupBoundRouter()}
+ * ----
+ *
  * Please refer to {@link io.vertx.ext.prometheus.VertxPrometheusOptions} for an exhaustive list of options.
  *
  * == Vert.x core tools metrics
@@ -71,20 +90,20 @@
  * |Description
  *
  * |Gauge
- * |{@code vertx.net.client.<host>:<port>.connections}
+ * |{@code vertx_net_client_connections{remote=<remote>}}
  * |Number of connections to the remote host currently opened.
  *
- * |Counter
- * |{@code vertx.net.client.<host>:<port>.bytesReceived}
- * |Total number of bytes received from the remote host.
+ * |Histogram
+ * |{@code vertx_net_client_bytes_received{remote=<remote>}}
+ * |Number of bytes received from the remote host.
+ *
+ * |Histogram
+ * |{@code vertx_net_client_bytes_sent{remote=<remote>}}
+ * |Number of bytes sent to the remote host.
  *
  * |Counter
- * |{@code vertx.net.client.<host>:<port>.bytesSent}
- * |Total number of bytes sent to the remote host.
- *
- * |Counter
- * |{@code vertx.net.client.<host>:<port>.errorCount}
- * |Total number of errors.
+ * |{@code vertx_net_client_error_count{remote=<remote>}}
+ * |Number of errors.
  *
  * |===
  *
@@ -97,35 +116,35 @@
  * |Description
  *
  * |Gauge
- * |{@code vertx.http.client.<host>:<port>.connections}
+ * |{@code vertx_http_client_connections{remote=<remote>}}
  * |Number of connections to the remote host currently opened.
  *
- * |Counter
- * |{@code vertx.http.client.<host>:<port>.bytesReceived}
- * |Total number of bytes received from the remote host.
+ * |Histogram
+ * |{@code vertx_http_client_bytes_received{remote=<remote>}}
+ * |Number of bytes received from the remote host.
+ *
+ * |Histogram
+ * |{@code vertx_http_client_bytes_sent{remote=<remote>}}
+ * |Number of bytes sent to the remote host.
  *
  * |Counter
- * |{@code vertx.http.client.<host>:<port>.bytesSent}
- * |Total number of bytes sent to the remote host.
- *
- * |Counter
- * |{@code vertx.http.client.<host>:<port>.errorCount}
- * |Total number of errors.
+ * |{@code vertx_http_client_error_count{remote=<remote>}}
+ * |Number of errors.
  *
  * |Gauge
- * |{@code vertx.http.client.<host>:<port>.requests}
+ * |{@code vertx_http_client_requests{remote=<remote>}}
  * |Number of requests waiting for a response.
  *
  * |Counter
- * |{@code vertx.http.client.<host>:<port>.requestCount}
- * |Total number of requests sent.
+ * |{@code vertx_http_client_request_count{remote=<remote>}}
+ * |Number of requests sent.
  *
- * |Counter
- * |{@code vertx.http.client.<host>:<port>.responseTime}
- * |Cumulated response time.
+ * |Histogram
+ * |{@code vertx_http_client_response_time{remote=<remote>}}
+ * |Response time.
  *
  * |Gauge
- * |{@code vertx.http.client.<host>:<port>.wsConnections}
+ * |{@code vertx_http_client__ws_connections{remote=<remote>}}
  * |Number of websockets currently opened.
  *
  * |===
@@ -138,16 +157,16 @@
  * |Metric name
  * |Description
  *
- * |Counter
- * |{@code vertx.datagram.<host>:<port>.bytesReceived}
+ * |Histogram
+ * |{@code vertx_datagram_bytes_received{local=<local>,remote=<remote>}}
  * |Total number of bytes received on the {@code <host>:<port>} listening address.
  *
- * |Counter
- * |{@code vertx.datagram.<host>:<port>.bytesSent}
+ * |Histogram
+ * |{@code vertx_datagram_bytes_sent{remote=<remote>}}
  * |Total number of bytes sent to the remote host.
  *
  * |Counter
- * |{@code vertx.datagram.errorCount}
+ * |{@code vertx_datagram_error_count}
  * |Total number of errors.
  *
  * |===
@@ -161,20 +180,20 @@
  * |Description
  *
  * |Gauge
- * |{@code vertx.net.server.<host>:<port>.connections}
- * |Number of opened connections to the Net Server listening on the {@code <host>:<port>} address.
+ * |{@code vertx_net_server_connections{local=<local>}}
+ * |Number of opened connections to the Net Server.
+ *
+ * |Histogram
+ * |{@code vertx_net_server_bytes_received{local=<local>}}
+ * |Number of bytes received by the Net Server.
+ *
+ * |Histogram
+ * |{@code vertx_net_server_bytes_sent{local=<local>}}
+ * |Number of bytes sent by the Net Server.
  *
  * |Counter
- * |{@code vertx.net.server.<host>:<port>.bytesReceived}
- * |Total number of bytes received by the Net Server listening on the {@code <host>:<port>} address.
- *
- * |Counter
- * |{@code vertx.net.server.<host>:<port>.bytesSent}
- * |Total number of bytes sent to the Net Server listening on the {@code <host>:<port>} address.
- *
- * |Counter
- * |{@code vertx.net.server.<host>:<port>.errorCount}
- * |Total number of errors.
+ * |{@code vertx_net_server_error_count{local=<local>}}
+ * |Number of errors.
  *
  * |===
  *
@@ -187,35 +206,35 @@
  * |Description
  *
  * |Gauge
- * |{@code vertx.http.server.<host>:<port>.connections}
- * |Number of opened connections to the HTTP Server listening on the {@code <host>:<port>} address.
+ * |{@code vertx_http_server_connections{local=<local>}}
+ * |Number of opened connections to the HTTP Server.
+ *
+ * |Histogram
+ * |{@code vertx_http_server_bytes_received{local=<local>}}
+ * |Number of bytes received by the HTTP Server.
+ *
+ * |Histogram
+ * |{@code vertx_http_server_bytes_sent{local=<local>}}
+ * |Number of bytes sent by the HTTP Server.
  *
  * |Counter
- * |{@code vertx.http.server.<host>:<port>.bytesReceived}
- * |Total number of bytes received by the HTTP Server listening on the {@code <host>:<port>} address.
- *
- * |Counter
- * |{@code vertx.http.server.<host>:<port>.bytesSent}
- * |Total number of bytes sent to the HTTP Server listening on the {@code <host>:<port>} address.
- *
- * |Counter
- * |{@code vertx.http.server.<host>:<port>.errorCount}
- * |Total number of errors.
+ * |{@code vertx_http_server_error_count{local=<local>}}
+ * |Number of errors.
  *
  * |Gauge
- * |{@code vertx.http.client.<host>:<port>.requests}
+ * |{@code vertx_http_server_requests{local=<local>}}
  * |Number of requests being processed.
  *
  * |Counter
- * |{@code vertx.http.client.<host>:<port>.requestCount}
- * |Total number of requests processed.
+ * |{@code vertx_http_server_request_count{local=<local>}}
+ * |Number of processed requests.
  *
- * |Counter
- * |{@code vertx.http.client.<host>:<port>.processingTime}
- * |Cumulated request processing time.
+ * |Histogram
+ * |{@code vertx_http_server_processing_time{local=<local>}}
+ * |Request processing time.
  *
  * |Gauge
- * |{@code vertx.http.client.<host>:<port>.wsConnections}
+ * |{@code vertx_http_client_ws_connections{local=<local>}}
  * |Number of websockets currently opened.
  *
  * |===
@@ -229,89 +248,49 @@
  * |Description
  *
  * |Gauge
- * |{@code vertx.eventbus.handlers}
- * |Number of event bus handlers.
+ * |{@code vertx_eventbus_handlers{address=<address>}}
+ * |Number of event bus handlers in use.
  *
  * |Counter
- * |{@code vertx.eventbus.errorCount}
- * |Total number of errors.
+ * |{@code vertx_eventbus_error_count{address=<address>}}
+ * |Number of errors.
  *
- * |Counter
- * |{@code vertx.eventbus.bytesWritten}
+ * |Histogram
+ * |{@code vertx_eventbus_bytes_written{address=<address>}}
  * |Total number of bytes sent while sending messages to event bus cluster peers.
  *
- * |Counter
- * |{@code vertx.eventbus.bytesRead}
+ * |Histogram
+ * |{@code vertx_eventbus_bytes_read{address=<address>}}
  * |Total number of bytes received while reading messages from event bus cluster peers.
  *
  * |Gauge
- * |{@code vertx.eventbus.pending}
+ * |{@code vertx_eventbus_pending{address=<address>,origin=<local/remote>}}
  * |Number of messages not processed yet. One message published will count for {@code N} pending if {@code N} handlers
  * are registered to the corresponding address.
  *
- * |Gauge
- * |{@code vertx.eventbus.pendingLocal}
- * |Like {@code vertx.eventbus.pending}, for local messages only.
- *
- * |Gauge
- * |{@code vertx.eventbus.pendingRemote}
- * |Like {@code vertx.eventbus.pending}, for remote messages only.
+ * |Counter
+ * |{@code vertx_eventbus_published{address=<address>,origin=<local/remote>}}
+ * |Number of messages published (publish / subscribe).
  *
  * |Counter
- * |{@code vertx.eventbus.publishedMessages}
- * |Total number of messages published (publish / subscribe).
+ * |{@code vertx_eventbus_sent{address=<address>,origin=<local/remote>}}
+ * |Number of messages sent (point-to-point).
  *
  * |Counter
- * |{@code vertx.eventbus.publishedLocalMessages}
- * |Like {@code vertx.eventbus.publishedMessages}, for local messages only.
+ * |{@code vertx_eventbus_received{address=<address>,origin=<local/remote>}}
+ * |Number of messages received.
  *
  * |Counter
- * |{@code vertx.eventbus.publishedRemoteMessages}
- * |Like {@code vertx.eventbus.publishedMessages}, for remote messages only.
+ * |{@code vertx_eventbus_delivered{address=<address>,origin=<local/remote>}}
+ * |Number of messages delivered to handlers.
  *
  * |Counter
- * |{@code vertx.eventbus.sentMessages}
- * |Total number of messages sent (point-to-point).
+ * |{@code vertx_eventbus_reply_failures{address=<address>}}
+ * |Number of message reply failures.
  *
- * |Counter
- * |{@code vertx.eventbus.sentLocalMessages}
- * |Like {@code vertx.eventbus.sentMessages}, for local messages only.
- *
- * |Counter
- * |{@code vertx.eventbus.sentRemoteMessages}
- * |Like {@code vertx.eventbus.sentMessages}, for remote messages only.
- *
- * |Counter
- * |{@code vertx.eventbus.receivedMessages}
- * |Total number of messages received.
- *
- * |Counter
- * |{@code vertx.eventbus.receivedLocalMessages}
- * |Like {@code vertx.eventbus.receivedMessages}, for remote messages only.
- *
- * |Counter
- * |{@code vertx.eventbus.receivedRemoteMessages}
- * |Like {@code vertx.eventbus.receivedMessages}, for remote messages only.
- *
- * |Counter
- * |{@code vertx.eventbus.deliveredMessages}
- * |Total number of messages delivered to handlers.
- *
- * |Counter
- * |{@code vertx.eventbus.deliveredLocalMessages}
- * |Like {@code vertx.eventbus.deliveredMessages}, for remote messages only.
- *
- * |Counter
- * |{@code vertx.eventbus.deliveredRemoteMessages}
- * |Like {@code vertx.eventbus.deliveredMessages}, for remote messages only.
- *
- * |Counter
- * |{@code vertx.eventbus.replyFailures}
- * |Total number of message reply failures.
- *
- * |Counter
- * |{@code vertx.eventbus.<address>.processingTime}
- * |Cumulated processing time for handlers listening to the {@code address}.
+ * |Histogram
+ * |{@code vertx_eventbus_processing_time{address=<address>}}
+ * |Processing time for handlers listening to the {@code address}.
  *
  * |===
  *
@@ -326,44 +305,34 @@
  *
  * NOTE: Vert.x creates two worker pools upfront, _vert.x-worker-thread_ and _vert.x-internal-blocking_.
  *
- * All metrics are prefixed with {@code <type>.<name>.}. For example, {@code worker.vert.x-internal-blocking.}.
- *
  * [cols="15,50,35", options="header"]
  * |===
  * |Metric type
  * |Metric name
  * |Description
  *
- * |Counter
- * |{@code vertx.pool.<type>.<name>.delay}
- * |Cumulated time waiting for a resource (queue time).
+ * |Histogram
+ * |{@code vertx_pool_queue_delay{pool_type=<type>,pool_name=<name>}}
+ * |Time waiting for a resource (queue time).
  *
  * |Gauge
- * |{@code vertx.pool.<type>.<name>.queued}
- * |Current number of elements waiting for a resource.
+ * |{@code vertx_pool_queue_size{pool_type=<type>,pool_name=<name>}}
+ * |Number of elements waiting for a resource.
  *
- * |Counter
- * |{@code vertx.pool.<type>.<name>.queueCount}
- * |Total number of elements queued.
- *
- * |Counter
- * |{@code vertx.pool.<type>.<name>.usage}
- * |Cumulated time using a resource (i.e. processing time for worker pools).
+ * |Histogram
+ * |{@code vertx_pool_usage{pool_type=<type>,pool_name=<name>}}
+ * |Time using a resource (i.e. processing time for worker pools).
  *
  * |Gauge
- * |{@code vertx.pool.<type>.<name>.inUse}
- * |Current number of resources used.
+ * |{@code vertx_pool_in_use{pool_type=<type>,pool_name=<name>}}
+ * |Number of resources used.
  *
  * |Counter
- * |{@code vertx.pool.<type>.<name>.completed}
- * |Total number of elements done with the resource (i.e. total number of tasks executed for worker pools).
+ * |{@code vertx_pool_completed{pool_type=<type>,pool_name=<name>}}
+ * |Number of elements done with the resource (i.e. total number of tasks executed for worker pools).
  *
  * |Gauge
- * |{@code vertx.pool.<type>.<name>.maxPoolSize}
- * |Maximum pool size, only present if it could be determined.
- *
- * |Gauge
- * |{@code vertx.pool.<type>.<name>.inUse}
+ * |{@code vertx_pool_ratio{pool_type=<type>,pool_name=<name>,max_pool_size=<size>}}
  * |Pool usage ratio, only present if maximum pool size could be determined.
  *
  * |===
@@ -377,7 +346,7 @@
  * |Description
  *
  * |Gauge
- * |{@code vertx.verticle.<name>}
+ * |{@code vertx_verticle{name=<name>}}
  * |Number of verticle instances deployed.
  *
  * |===

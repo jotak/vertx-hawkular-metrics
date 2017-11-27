@@ -16,6 +16,7 @@
  */
 package io.vertx.ext.prometheus.impl;
 
+import io.prometheus.client.CollectorRegistry;
 import io.prometheus.client.Counter;
 import io.prometheus.client.Histogram;
 import io.vertx.core.net.SocketAddress;
@@ -33,12 +34,15 @@ class PrometheusDatagramSocketMetrics implements DatagramSocketMetrics {
 
   private volatile String localAddress;
 
-  PrometheusDatagramSocketMetrics(MetricsStore store) {
-    bytesReceived = store.histogram("datagram_bytes_received", "Total number of datagram bytes received",
-      "local", "remote");
-    bytesSent = store.histogram("datagram_bytes_sent", "Total number of datagram bytes sent",
-      "remote");
-    errorCount = store.counter("datagram_error_count", "Total number of datagram errors");
+  PrometheusDatagramSocketMetrics(CollectorRegistry registry) {
+  bytesReceived = Histogram.build("vertx_datagram_bytes_received", "Total number of datagram bytes received")
+    .labelNames("local", "remote")
+    .register(registry);
+  bytesSent = Histogram.build("vertx_datagram_bytes_sent", "Total number of datagram bytes sent")
+    .labelNames("remote")
+    .register(registry);
+  errorCount = Counter.build("vertx_datagram_error_count", "Total number of datagram errors")
+    .register(registry);
   }
 
   @Override

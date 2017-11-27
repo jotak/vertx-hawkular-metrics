@@ -16,6 +16,7 @@
 
 package io.vertx.ext.prometheus.impl;
 
+import io.prometheus.client.CollectorRegistry;
 import io.prometheus.client.Counter;
 import io.prometheus.client.Gauge;
 import io.prometheus.client.Histogram;
@@ -39,23 +40,31 @@ class PrometheusHttpClientMetrics implements HttpClientMetrics<PrometheusHttpCli
   private final Histogram responseTime;
   private final Gauge wsConnections;
 
-  PrometheusHttpClientMetrics(MetricsStore store) {
-    connections = store.gauge("http_client_connections", "Number of connections to the remote host currently opened",
-      "remote");
-    bytesReceived = store.histogram("http_client_bytes_received", "Number of bytes received from the remote host",
-      "remote");
-    bytesSent = store.histogram("http_client_bytes_sent", "Number of bytes sent to the remote host",
-      "remote");
-    errorCount = store.counter("http_client_error_count", "Number of errors",
-      "remote");
-    requests = store.gauge("http_client_requests", "Number of requests waiting for a response",
-      "remote");
-    requestCount = store.counter("http_client_request_count", "Number of requests sent",
-      "remote");
-    responseTime = store.histogram("http_client_reponse_time", "Response time",
-      "remote");
-    wsConnections = store.gauge("http_client_ws_connections", "Number of websockets currently opened",
-      "remote");
+  PrometheusHttpClientMetrics(CollectorRegistry registry) {
+    connections = Gauge.build("vertx_http_client_connections", "Number of connections to the remote host currently opened")
+      .labelNames("remote")
+      .register(registry);
+    bytesReceived = Histogram.build("vertx_http_client_bytes_received", "Number of bytes received from the remote host")
+      .labelNames("remote")
+      .register(registry);
+    bytesSent = Histogram.build("vertx_http_client_bytes_sent", "Number of bytes sent to the remote host")
+      .labelNames("remote")
+      .register(registry);
+    errorCount = Counter.build("vertx_http_client_error_count", "Number of errors")
+      .labelNames("remote")
+      .register(registry);
+    requests = Gauge.build("vertx_http_client_requests", "Number of requests waiting for a response")
+      .labelNames("remote")
+      .register(registry);
+    requestCount = Counter.build("vertx_http_client_request_count", "Number of requests sent")
+      .labelNames("remote")
+      .register(registry);
+    responseTime = Histogram.build("vertx_http_client_reponse_time", "Response time")
+      .labelNames("remote")
+      .register(registry);
+    wsConnections = Gauge.build("vertx_http_client_ws_connections", "Number of websockets currently opened")
+      .labelNames("remote")
+      .register(registry);
   }
 
   @Override

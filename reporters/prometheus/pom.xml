@@ -51,11 +51,16 @@
       <artifactId>simpleclient</artifactId>
       <version>0.1.0</version>
     </dependency>
-    <!--<dependency>-->
-      <!--<groupId>io.prometheus</groupId>-->
-      <!--<artifactId>simpleclient_vertx</artifactId>-->
-      <!--<version>0.1.0</version>-->
-    <!--</dependency>-->
+    <dependency>
+      <groupId>io.prometheus</groupId>
+      <artifactId>simpleclient_vertx</artifactId>
+      <version>0.1.0</version>
+    </dependency>
+    <dependency>
+      <groupId>io.vertx</groupId>
+      <artifactId>vertx-web</artifactId>
+      <version>${stack.version}</version>
+    </dependency>
     <dependency>
       <groupId>io.vertx</groupId>
       <artifactId>vertx-metrics-collector</artifactId>

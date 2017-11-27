@@ -16,6 +16,7 @@
 
 package io.vertx.ext.prometheus.impl;
 
+import io.prometheus.client.CollectorRegistry;
 import io.prometheus.client.Gauge;
 import io.vertx.core.Verticle;
 
@@ -25,9 +26,10 @@ import io.vertx.core.Verticle;
 class PrometheusVerticleMetrics {
   private final Gauge verticles;
 
-  PrometheusVerticleMetrics(MetricsStore store) {
-    verticles = store.gauge("verticle", "Number of verticle instances deployed",
-      "name");
+  PrometheusVerticleMetrics(CollectorRegistry registry) {
+    verticles = Gauge.build("vertx_verticle", "Number of verticle instances deployed")
+      .labelNames("name")
+      .register(registry);
   }
 
   void verticleDeployed(Verticle verticle) {

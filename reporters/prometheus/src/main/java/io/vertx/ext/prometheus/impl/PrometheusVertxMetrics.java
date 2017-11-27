@@ -17,7 +17,10 @@
 package io.vertx.ext.prometheus.impl;
 
 import io.prometheus.client.CollectorRegistry;
+import io.prometheus.client.vertx.MetricsHandler;
+import io.vertx.core.Handler;
 import io.vertx.core.Verticle;
+import io.vertx.core.Vertx;
 import io.vertx.core.datagram.DatagramSocket;
 import io.vertx.core.datagram.DatagramSocketOptions;
 import io.vertx.core.eventbus.EventBus;
@@ -36,6 +39,8 @@ import io.vertx.core.spi.metrics.HttpServerMetrics;
 import io.vertx.core.spi.metrics.PoolMetrics;
 import io.vertx.core.spi.metrics.TCPMetrics;
 import io.vertx.ext.prometheus.VertxPrometheusOptions;
+import io.vertx.ext.web.Router;
+import io.vertx.ext.web.RoutingContext;
 
 import java.util.Optional;
 
@@ -47,7 +52,7 @@ import static io.vertx.ext.metrics.collector.MetricsType.*;
  * @author Joel Takvorian
  */
 public class PrometheusVertxMetrics extends DummyVertxMetrics {
-  private final MetricsStore metricsStore;
+  private final CollectorRegistry registry;
   private final Optional<EventBusMetrics> eventBusMetrics;
   private final Optional<DatagramSocketMetrics> datagramSocketMetrics;
   private final Optional<TCPMetrics> netClientMetrics;
@@ -56,29 +61,43 @@ public class PrometheusVertxMetrics extends DummyVertxMetrics {
   private final Optional<PrometheusHttpServerMetrics> httpServerMetrics;
   private final Optional<PrometheusPoolMetrics> poolMetrics;
   private final Optional<PrometheusVerticleMetrics> verticleMetrics;
+  private final Vertx vertx;
+  private final VertxPrometheusOptions options;
 
   /**
    * @param options Vertx Prometheus options
    */
-  PrometheusVertxMetrics(VertxPrometheusOptions options) {
-    metricsStore = new MetricsStore(CollectorRegistry.defaultRegistry);
-
+  PrometheusVertxMetrics(Vertx vertx, VertxPrometheusOptions options) {
+    this.vertx = vertx;
+    this.options = options;
+    registry = CollectorRegistry.defaultRegistry;
     eventBusMetrics = options.isMetricsTypeDisabled(EVENT_BUS) ? Optional.empty()
-      : Optional.of(new PrometheusEventBusMetrics(metricsStore));
+      : Optional.of(new PrometheusEventBusMetrics(registry));
     datagramSocketMetrics = options.isMetricsTypeDisabled(DATAGRAM_SOCKET) ? Optional.empty()
-      : Optional.of(new PrometheusDatagramSocketMetrics(metricsStore));
+      : Optional.of(new PrometheusDatagramSocketMetrics(registry));
     netClientMetrics = options.isMetricsTypeDisabled(NET_CLIENT) ? Optional.empty()
-      : Optional.of(new PrometheusNetClientMetrics(metricsStore));
+      : Optional.of(new PrometheusNetClientMetrics(registry));
     netServerMetrics = options.isMetricsTypeDisabled(NET_SERVER) ? Optional.empty()
-      : Optional.of(new PrometheusNetServerMetrics(metricsStore));
+      : Optional.of(new PrometheusNetServerMetrics(registry));
     httpClientMetrics = options.isMetricsTypeDisabled(HTTP_CLIENT) ? Optional.empty()
-      : Optional.of(new PrometheusHttpClientMetrics(metricsStore));
+      : Optional.of(new PrometheusHttpClientMetrics(registry));
     httpServerMetrics = options.isMetricsTypeDisabled(HTTP_SERVER) ? Optional.empty()
-      : Optional.of(new PrometheusHttpServerMetrics(metricsStore));
+      : Optional.of(new PrometheusHttpServerMetrics(registry));
     poolMetrics = options.isMetricsTypeDisabled(NAMED_POOLS) ? Optional.empty()
-      : Optional.of(new PrometheusPoolMetrics(metricsStore));
+      : Optional.of(new PrometheusPoolMetrics(registry));
     verticleMetrics = options.isMetricsTypeDisabled(VERTICLES) ? Optional.empty()
-      : Optional.of(new PrometheusVerticleMetrics(metricsStore));
+      : Optional.of(new PrometheusVerticleMetrics(registry));
+  }
+
+  @Override
+  public void eventBusInitialized(EventBus bus) {
+    // We don't actually care about the eventbus here, but we assume it's a good point to start the HTTP server
+    if (options.hasDedicatedServer()) {
+      // Start dedicated server
+      Router router = Router.router(vertx);
+      router.route(options.getServerEndpoint()).handler(createMetricsHandler());
+      vertx.createHttpServer().requestHandler(router::accept).listen(options.getServerPort());
+    }
   }
 
   @Override
@@ -152,6 +171,11 @@ public class PrometheusVertxMetrics extends DummyVertxMetrics {
 
   @Override
   public void close() {
-    metricsStore.getRegistry().clear();
+    registry.clear();
+  }
+
+  public static Handler<RoutingContext> createMetricsHandler() {
+    // Create handler from io.prometheus:simpleclient_vertx
+    return new MetricsHandler();
   }
 }
